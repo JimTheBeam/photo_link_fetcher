@@ -1,0 +1,9 @@
+# Config yaml
+
+
+# TODO: ПЕРЕДЕЛАТЬ
+# app configuration
+app:
+    # connection timeout in seconds
+    timeout: 10
+    url_scheme: "https"
