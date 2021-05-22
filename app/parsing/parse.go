@@ -63,8 +63,6 @@ func parsePage(urlToGet *url.URL, cfg *cfg.Config) string {
 		log.Printf("Parse images: %v", err)
 	}
 	fmt.Sprintln(imgs)
-	fmt.Printf("hi")
-	// asdjfasd
 
 	// parse links
 	links, err := parseLinks(urlToGet, content)
