@@ -2,11 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"parse_photo_links/app/parsing"
+	"parse_photo_links/app/server"
 	"parse_photo_links/cfg"
 
 	"gopkg.in/yaml.v2"
@@ -69,10 +68,13 @@ func main() {
 	// TODO: Тут сделать майн функцию
 
 	// fmt.Println()
-	PagesContent, err := parsing.ParseAll(&cfg)
-	fmt.Println("error from main:", err)
+	// PagesContent, err := parsing.ParseAll(&cfg)
+	// fmt.Println("error from main:", err)
 
-	fmt.Sprintln(PagesContent)
+	// fmt.Sprintln(PagesContent)
+
+	server.Server()
+
 }
 
 // loadCfg - open config file and put config to cfg.Config struct

@@ -1,7 +1,6 @@
 package parsing
 
 import (
-	"fmt"
 	"log"
 	"net/url"
 	jsonparse "parse_photo_links/app/parsing/json_parse"
@@ -11,10 +10,6 @@ import (
 
 	"golang.org/x/net/html"
 )
-
-// var JSON = `{"url":["abc.com", "safasdf.com", "facebook.com","http://www.google.com/", "https://mail.ru/"]}`
-
-var JSON = `{"url":["httttps://google.com/"]}`
 
 // async - async parsing pages
 func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg.Config) {
@@ -51,16 +46,13 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 }
 
 // ParseAll - parse all pages
-func ParseAll(cfg *cfg.Config) ([]PageUrls, error) {
-	var (
-		urls jsonparse.IncomingJSON
-	)
+func ParseAll(cfg *cfg.Config, urls jsonparse.IncomingJSON) ([]PageUrls, error) {
 
 	// parse urls from incoming json and put them in urls
-	if err := jsonparse.ParseJSON(JSON, &urls); err != nil {
-		log.Printf("Parse json: %v", err)
-		return []PageUrls{}, errParseJson{}
-	}
+	// if err := jsonparse.ParseJSON(JSON, &urls); err != nil {
+	// 	log.Printf("Parse json: %v", err)
+	// 	return []PageUrls{}, errParseJson{}
+	// }
 
 	PagesContent := make([]PageUrls, 0, len(urls.Url))
 
@@ -73,13 +65,13 @@ func ParseAll(cfg *cfg.Config) ([]PageUrls, error) {
 	}
 	wg.Wait()
 
-	// TODO: это печать она не нужна
-	for i := range PagesContent {
-		fmt.Printf("link: %s\nError: %v\nIMAGES: %v\n\n",
-			PagesContent[i].PageUrl,
-			PagesContent[i].ErrorMessage,
-			PagesContent[i].Img)
-	}
+	// TODO: Delete this. It's printing
+	// for i := range PagesContent {
+	// 	fmt.Printf("link: %s\nError: %v\nIMAGES: %v\n\n",
+	// 		PagesContent[i].PageUrl,
+	// 		PagesContent[i].ErrorMessage,
+	// 		PagesContent[i].Img)
+	// }
 	return PagesContent, nil
 }
 

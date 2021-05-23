@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-// ParseJSON - parse incoming json
+// ParseJSON - parse incoming json STRING
 func ParseJSON(JSON string, urls *IncomingJSON) error {
 
 	err := json.Unmarshal([]byte(JSON), &urls)
