@@ -7,58 +7,71 @@ import (
 	jsonparse "parse_photo_links/app/parsing/json_parse"
 	"parse_photo_links/cfg"
 	"strings"
+	"sync"
 
 	"golang.org/x/net/html"
 )
 
-var JSON = `{"url":["abc.com", "safasdf.com", "facebook.com","http://www.google.com/", "https://mail.ru/"]}`
+// var JSON = `{"url":["abc.com", "safasdf.com", "facebook.com","http://www.google.com/", "https://mail.ru/"]}`
 
-// var JSON = `{"url":["httttps://github.com/"]}`
+var JSON = `{"url":["httttps://google.com/"]}`
 
-func ParseAll(cfg *cfg.Config) error {
+// async - async parsing pages
+func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg.Config) {
+	defer wg.Done()
+
+	// Parse URL
+	urlToGet, err := url.Parse(correctUrl(oneUrl))
+	if err != nil {
+		log.Printf("Parse url: %v\n", err)
+
+		*PagesContent = append(*PagesContent,
+			PageUrls{
+				PageUrl:      urlToGet.String(),
+				ErrorMessage: errUrlParse.Error(),
+			},
+		)
+		return
+	}
+
+	// get page content
+	content, err := parsePage(urlToGet, cfg)
+	if err != nil {
+		*PagesContent = append(*PagesContent,
+			PageUrls{
+				PageUrl:      urlToGet.String(),
+				ErrorMessage: err.Error(),
+			},
+		)
+		return
+	}
+
+	// append successfull parsing result in slice
+	*PagesContent = append(*PagesContent, content)
+}
+
+// ParseAll - parse all pages
+func ParseAll(cfg *cfg.Config) ([]PageUrls, error) {
 	var (
-		urls         jsonparse.IncomingJSON
-		PagesContent []PageUrls
-		content      PageUrls
+		urls jsonparse.IncomingJSON
 	)
 
 	// parse urls from incoming json and put them in urls
 	if err := jsonparse.ParseJSON(JSON, &urls); err != nil {
 		log.Printf("Parse json: %v", err)
-		return errParseJson{}
+		return []PageUrls{}, errParseJson{}
 	}
+
+	PagesContent := make([]PageUrls, 0, len(urls.Url))
+
+	wg := sync.WaitGroup{}
 
 	// get page data:
 	for _, oneUrl := range urls.Url {
-		// Parse URL
-		urlToGet, err := url.Parse(correctUrl(oneUrl))
-		if err != nil {
-			log.Printf("Parse url: %v\n", err)
-
-			PagesContent = append(PagesContent,
-				PageUrls{
-					PageUrl:      urlToGet.String(),
-					ErrorMessage: errUrlParse.Error(),
-				},
-			)
-			continue
-		}
-
-		// get page content
-		content, err = parsePage(urlToGet, cfg)
-		if err != nil {
-			PagesContent = append(PagesContent,
-				PageUrls{
-					PageUrl:      urlToGet.String(),
-					ErrorMessage: err.Error(),
-				},
-			)
-			continue
-		}
-
-		// append successfull parsing result in slice
-		PagesContent = append(PagesContent, content)
+		wg.Add(1)
+		go async(&wg, oneUrl, &PagesContent, cfg)
 	}
+	wg.Wait()
 
 	// TODO: это печать она не нужна
 	for i := range PagesContent {
@@ -67,7 +80,7 @@ func ParseAll(cfg *cfg.Config) error {
 			PagesContent[i].ErrorMessage,
 			PagesContent[i].Img)
 	}
-	return nil
+	return PagesContent, nil
 }
 
 // parsePage - parsing one page

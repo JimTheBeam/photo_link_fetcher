@@ -69,8 +69,10 @@ func main() {
 	// TODO: Тут сделать майн функцию
 
 	// fmt.Println()
-	err := parsing.ParseAll(&cfg)
+	PagesContent, err := parsing.ParseAll(&cfg)
 	fmt.Println("error from main:", err)
+
+	fmt.Sprintln(PagesContent)
 }
 
 // loadCfg - open config file and put config to cfg.Config struct
