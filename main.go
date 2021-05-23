@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -68,7 +69,8 @@ func main() {
 	// TODO: Тут сделать майн функцию
 
 	// fmt.Println()
-	parsing.Parse(&cfg)
+	err := parsing.ParseAll(&cfg)
+	fmt.Println("error from main:", err)
 }
 
 // loadCfg - open config file and put config to cfg.Config struct
