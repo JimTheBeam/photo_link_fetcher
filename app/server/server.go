@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"parse_photo_links/app/parsing"
@@ -22,11 +23,22 @@ func Server() {
 func getLinks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	pageUrls, err := parsing.ParseAll(&cfg.Config{}, r.Body)
+	// convert r.body to []byte
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Convert r.body to []byte: %v", err)
+	}
+
+	pageUrls, err := parsing.ParseAll(&cfg.Config{}, body)
 	if err != nil {
 		log.Printf("ParseAll: %v", err)
-		json.NewEncoder(w).Encode(ResponseJson{Error: err.Error(), Data: pageUrls})
+		json.NewEncoder(w).Encode(ResponseJson{
+			ErrorCode:    422,
+			ErrorMessage: err.Error(),
+			Result:       pageUrls,
+		},
+		)
 	} else {
-		json.NewEncoder(w).Encode(ResponseJson{Data: pageUrls})
+		json.NewEncoder(w).Encode(ResponseJson{Result: pageUrls})
 	}
 }

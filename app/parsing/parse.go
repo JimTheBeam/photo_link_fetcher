@@ -1,7 +1,6 @@
 package parsing
 
 import (
-	"io"
 	"log"
 	"net/url"
 	jsonparse "parse_photo_links/app/parsing/json_parse"
@@ -47,7 +46,7 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 }
 
 // ParseAll - parse all pages
-func ParseAll(cfg *cfg.Config, body io.ReadCloser) ([]PageUrls, error) {
+func ParseAll(cfg *cfg.Config, body []byte) ([]PageUrls, error) {
 
 	var urls jsonparse.IncomingJSON
 
@@ -59,6 +58,8 @@ func ParseAll(cfg *cfg.Config, body io.ReadCloser) ([]PageUrls, error) {
 	if len(urls.Url) == 0 {
 		return []PageUrls{}, ErrEmptyJson
 	}
+
+	log.Printf("incoming json: %v\n", urls)
 
 	PagesContent := make([]PageUrls, 0, len(urls.Url))
 
