@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"parse_photo_links/app/parsing"
+	"parse_photo_links/app/server"
 	"parse_photo_links/cfg"
 
 	"gopkg.in/yaml.v2"
@@ -45,7 +45,7 @@ func main() {
 	exitCode++
 
 	// exitCode = 2
-	// works when helps flag is activated
+	// works when help flag is activated
 	if *helpFlag {
 		flg.PrintDefaults()
 		os.Exit(exitCode)
@@ -65,10 +65,9 @@ func main() {
 
 	exitCode++
 
-	// TODO: Тут сделать майн функцию
+	// server
+	server.Server()
 
-	// fmt.Println()
-	parsing.Parse(&cfg)
 }
 
 // loadCfg - open config file and put config to cfg.Config struct

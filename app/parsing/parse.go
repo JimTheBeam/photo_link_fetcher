@@ -1,155 +1,180 @@
 package parsing
 
 import (
-	"fmt"
 	"log"
 	"net/url"
 	jsonparse "parse_photo_links/app/parsing/json_parse"
 	"parse_photo_links/cfg"
-	"regexp"
 	"strings"
+	"sync"
+
+	"golang.org/x/net/html"
 )
 
-// var JSON = `{"url":["abc.com","facebook.com","http://www.google.com/", "https://mail.ru/"]}`
+// async - async parsing pages
+func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg.Config) {
+	defer wg.Done()
 
-var JSON = `{"url":["https://www.mail.ru"]}`
-
-func Parse(cfg *cfg.Config) error {
-	var (
-		urls    jsonparse.IncomingJSON
-		content string
-	)
-
-	// parse incoming json
-	err := jsonparse.ParseJSON(JSON, &urls)
+	// Parse URL
+	urlToGet, err := url.Parse(correctUrl(oneUrl))
 	if err != nil {
-		log.Printf("Parse json: %v", err)
+		log.Printf("Parse url: %v\n", err)
+
+		*PagesContent = append(*PagesContent,
+			PageUrls{
+				PageUrl:      urlToGet.String(),
+				ErrorMessage: ErrUrlParse.Error(),
+			},
+		)
+		return
 	}
+
+	// get page content
+	content, err := parsePage(urlToGet, cfg)
+	if err != nil {
+		*PagesContent = append(*PagesContent,
+			PageUrls{
+				PageUrl:      urlToGet.String(),
+				ErrorMessage: err.Error(),
+			},
+		)
+		return
+	}
+
+	// append successfull parsing result in slice
+	*PagesContent = append(*PagesContent, content)
+}
+
+// ParseAll - parse all pages
+func ParseAll(cfg *cfg.Config, body []byte) ([]PageUrls, error) {
+
+	var urls jsonparse.IncomingJSON
+
+	err := jsonparse.ParseJSON(body, &urls)
+	if err != nil {
+		return []PageUrls{}, err
+	}
+
+	if len(urls.Url) == 0 {
+		return []PageUrls{}, ErrEmptyJson
+	}
+
+	log.Printf("incoming json: %v\n", urls)
+
+	PagesContent := make([]PageUrls, 0, len(urls.Url))
+
+	wg := sync.WaitGroup{}
 
 	// get page data:
 	for _, oneUrl := range urls.Url {
-		// Parse URL
-		urlToGet, err := url.Parse(correctUrl(oneUrl))
-		if err != nil {
-			log.Printf("Parse url: %v\n", err)
-			// TODO: Return!!!!!
-			return err
-		}
-
-		// get page content
-		content = parsePage(urlToGet, cfg)
-
-		if err != nil {
-			log.Printf("Parse page: %v", err)
-		}
-
+		wg.Add(1)
+		go async(&wg, oneUrl, &PagesContent, cfg)
 	}
-	fmt.Sprintln(content)
-	return nil
+	wg.Wait()
+
+	return PagesContent, nil
 }
 
 // parsePage - parsing one page
-func parsePage(urlToGet *url.URL, cfg *cfg.Config) string {
+func parsePage(urlToGet *url.URL, cfg *cfg.Config) (PageUrls, error) {
+
+	var (
+		links  []string
+		images []string
+	)
 
 	// get content:
 	content, err := getHTML(urlToGet.String(), cfg)
 	if err != nil {
 		log.Printf("Get HTML: %v, %v", urlToGet.String(), err)
+		return PageUrls{}, err
 	}
-
-	// Parse images
-	imgs, err := parseImages(urlToGet, content)
-	if err != nil {
-		log.Printf("Parse images: %v", err)
-	}
-	fmt.Sprintln(imgs)
 
 	// parse links
-	links, err := parseLinks(urlToGet, content)
-	if err != nil {
-		log.Printf("ParseLinks: %v", err)
-	}
-	fmt.Sprintln(links)
+	parseLinks(&links, content, urlToGet)
 
-	return content
+	// parse images
+	parseImg(&images, content, urlToGet)
+
+	return PageUrls{
+			PageUrl: urlToGet.String(),
+			Img:     images,
+			Link:    links,
+		},
+		nil
 }
 
-// parseImages - parse images from the page
-func parseImages(urlToGet *url.URL, content string) ([]string, error) {
-	var (
-		err        error
-		imgs       []string
-		matches    [][]string
-		findImages = regexp.MustCompile(`<img[^>]+\bsrc=["']([^"']+)["']`)
-		// `<img.*?src="(.*?)"`
-		// `<img[^>]+\bsrc=["']([^"']+)["']`
-	)
+// parseLinks - parse links from the page
+func parseLinks(links *[]string, content *html.Node, urlToGet *url.URL) []string {
 
-	// Retrieve all image URLs from string
-	matches = findImages.FindAllStringSubmatch(content, -1)
+	var err error
 
-	for _, val := range matches {
-		var imgUrl *url.URL
+	if content.Type == html.ElementNode && content.Data == "a" {
+		for _, a := range content.Attr {
+			if a.Key == "href" {
+				var linkUrl *url.URL
 
-		// Parse the image URL
-		ur := strings.ReplaceAll(strings.ReplaceAll(val[1], "\n", ""), "\r", "")
-		if imgUrl, err = url.Parse(ur); err != nil {
-			log.Printf("Parse image url: %v, %v", val[1], err)
-			continue
+				// parse link url
+				if linkUrl, err = url.Parse(a.Val); err != nil {
+					log.Printf("Parse link url: %v", a.Val)
+					continue
+				}
+
+				// If the URL is absolute, add it to the slice
+				// If the URL is relative, build an absolute URL
+				if linkUrl.IsAbs() {
+					*links = append(*links, linkUrl.String())
+				} else {
+					*links = append(*links, urlToGet.Scheme+"://"+urlToGet.Host+linkUrl.String())
+				}
+			}
 		}
-
-		// ignore gif files
-		if strings.HasPrefix(imgUrl.String(), "data:image/gif") {
-			continue
-		}
-
-		// If the URL is absolute, add it to the slice
-		// If the URL is relative, build an absolute URL
-		if imgUrl.IsAbs() {
-			imgs = append(imgs, imgUrl.String())
-		} else {
-			imgs = append(imgs, urlToGet.Scheme+"://"+urlToGet.Host+imgUrl.String())
-		}
-
 	}
-	//TODO: УДАЛИТЬ
-	for i := range imgs {
-		fmt.Printf("img final: %s\n\n", imgs[i])
+
+	// recursively find another links
+	for c := content.FirstChild; c != nil; c = c.NextSibling {
+		*links = parseLinks(links, c, urlToGet)
 	}
-	return imgs, err
+
+	return *links
 }
 
-func parseLinks(urlToGet *url.URL, content string) ([]string, error) {
-	var (
-		err       error
-		links     []string = make([]string, 0)
-		findLinks          = regexp.MustCompile("<a.*?href=\"(.*?)\"")
-	)
+// parseImg - parse images from the page
+func parseImg(links *[]string, content *html.Node, urlToGet *url.URL) []string {
 
-	// Retrieve all anchor tag URLs from string
-	matches := findLinks.FindAllStringSubmatch(content, -1)
+	var err error
 
-	for _, val := range matches {
-		var linkUrl *url.URL
+	if content.Type == html.ElementNode && content.Data == "img" {
+		for _, img := range content.Attr {
+			if img.Key == "src" {
+				var imgUrl *url.URL
 
-		// Parse the anchr tag URL
-		if linkUrl, err = url.Parse(val[1]); err != nil {
-			log.Printf("Parse link url: %v", val[1])
-			continue
-		}
+				// parse image url
+				if imgUrl, err = url.Parse(img.Val); err != nil {
+					log.Printf("Parse image url: %v", img.Val)
+					continue
+				}
 
-		// If the URL is absolute, add it to the slice
-		// If the URL is relative, build an absolute URL
-		if linkUrl.IsAbs() {
-			links = append(links, linkUrl.String())
-		} else {
-			links = append(links, urlToGet.Scheme+"://"+urlToGet.Host+linkUrl.String())
+				// ignore gif files
+				if strings.HasPrefix(imgUrl.String(), "data:image/gif") {
+					continue
+				}
+
+				// If the URL is absolute, add it to the slice
+				// If the URL is relative, build an absolute URL
+				if imgUrl.IsAbs() {
+					*links = append(*links, imgUrl.String())
+				} else {
+					*links = append(*links, urlToGet.Scheme+"://"+urlToGet.Host+imgUrl.String())
+				}
+			}
 		}
 	}
-	//TODO: УДАЛИТЬ
-	// for i := range links {
-	// 	fmt.Printf("links final: %s\n\n", links[i])
-	// }
 
-	return links, err
+	// recursively find another img links
+	for c := content.FirstChild; c != nil; c = c.NextSibling {
+		*links = parseImg(links, c, urlToGet)
+	}
+
+	return *links
 }
