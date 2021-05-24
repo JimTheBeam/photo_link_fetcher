@@ -45,7 +45,7 @@ func main() {
 	exitCode++
 
 	// exitCode = 2
-	// works when helps flag is activated
+	// works when help flag is activated
 	if *helpFlag {
 		flg.PrintDefaults()
 		os.Exit(exitCode)
