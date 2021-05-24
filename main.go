@@ -65,14 +65,7 @@ func main() {
 
 	exitCode++
 
-	// TODO: Тут сделать майн функцию
-
-	// fmt.Println()
-	// PagesContent, err := parsing.ParseAll(&cfg)
-	// fmt.Println("error from main:", err)
-
-	// fmt.Sprintln(PagesContent)
-
+	// server
 	server.Server()
 
 }

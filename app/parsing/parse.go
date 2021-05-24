@@ -1,6 +1,8 @@
 package parsing
 
 import (
+	"encoding/json"
+	"io"
 	"log"
 	"net/url"
 	jsonparse "parse_photo_links/app/parsing/json_parse"
@@ -23,7 +25,7 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 		*PagesContent = append(*PagesContent,
 			PageUrls{
 				PageUrl:      urlToGet.String(),
-				ErrorMessage: errUrlParse.Error(),
+				ErrorMessage: ErrUrlParse.Error(),
 			},
 		)
 		return
@@ -46,13 +48,19 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 }
 
 // ParseAll - parse all pages
-func ParseAll(cfg *cfg.Config, urls jsonparse.IncomingJSON) ([]PageUrls, error) {
+func ParseAll(cfg *cfg.Config, body io.ReadCloser) ([]PageUrls, error) {
+
+	var urls jsonparse.IncomingJSON
 
 	// parse urls from incoming json and put them in urls
-	// if err := jsonparse.ParseJSON(JSON, &urls); err != nil {
-	// 	log.Printf("Parse json: %v", err)
-	// 	return []PageUrls{}, errParseJson{}
-	// }
+	if err := json.NewDecoder(body).Decode(&urls); err != nil {
+		log.Printf("Decoding json: %v", err)
+		return []PageUrls{}, ErrParseJson
+	}
+
+	if len(urls.Url) == 0 {
+		return []PageUrls{}, ErrEmptyJson
+	}
 
 	PagesContent := make([]PageUrls, 0, len(urls.Url))
 
@@ -65,13 +73,6 @@ func ParseAll(cfg *cfg.Config, urls jsonparse.IncomingJSON) ([]PageUrls, error) 
 	}
 	wg.Wait()
 
-	// TODO: Delete this. It's printing
-	// for i := range PagesContent {
-	// 	fmt.Printf("link: %s\nError: %v\nIMAGES: %v\n\n",
-	// 		PagesContent[i].PageUrl,
-	// 		PagesContent[i].ErrorMessage,
-	// 		PagesContent[i].Img)
-	// }
 	return PagesContent, nil
 }
 

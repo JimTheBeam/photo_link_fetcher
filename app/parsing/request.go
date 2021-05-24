@@ -19,7 +19,7 @@ func getHTML(url string, cfg *cfg.Config) (*html.Node, error) {
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Printf("getHTML: %v", err)
-		return nil, errTimeout{link: url}
+		return nil, errGetHTML{link: url}
 	}
 	defer resp.Body.Close()
 

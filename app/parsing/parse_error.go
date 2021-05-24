@@ -5,13 +5,13 @@ import (
 	"fmt"
 )
 
-// errTimeout - to long answer from the site
-type errTimeout struct {
+// errGetHTML - to long answer from the site
+type errGetHTML struct {
 	link string
 }
 
-func (e errTimeout) Error() string {
-	return fmt.Sprintf("Timeout error. Could not reach the site: %s", e.link)
+func (e errGetHTML) Error() string {
+	return fmt.Sprintf("Could not reach the site: %s", e.link)
 }
 
 // errStatusCode - bad answer from the site
@@ -33,13 +33,11 @@ func (e errParseBody) Error() string {
 	return fmt.Sprintf("Could not parse the body of the answer: %s", e.link)
 }
 
-// errUrlParse - error from parsing incoming url
-var errUrlParse = errors.New("Could not parse incoming url")
+// ErrUrlParse - error from parsing incoming url
+var ErrUrlParse = errors.New("Could not parse an incoming url")
 
-// errParseJson - incorrect incomming json request
-type errParseJson struct {
-}
+// ErrParseJson - incorrect incomming json request
+var ErrParseJson = errors.New("Incorrect incomming json")
 
-func (e errParseJson) Error() string {
-	return fmt.Sprintf("Incorrect incomming JSON")
-}
+// ErrEmptyJson - incorrect incomming json request
+var ErrEmptyJson = errors.New("Empty array of an incoming url")
