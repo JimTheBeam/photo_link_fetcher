@@ -1,7 +1,6 @@
 package parsing
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"net/url"
@@ -52,10 +51,9 @@ func ParseAll(cfg *cfg.Config, body io.ReadCloser) ([]PageUrls, error) {
 
 	var urls jsonparse.IncomingJSON
 
-	// parse urls from incoming json and put them in urls
-	if err := json.NewDecoder(body).Decode(&urls); err != nil {
-		log.Printf("Decoding json: %v", err)
-		return []PageUrls{}, ErrParseJson
+	err := jsonparse.ParseJSON(body, &urls)
+	if err != nil {
+		return []PageUrls{}, err
 	}
 
 	if len(urls.Url) == 0 {

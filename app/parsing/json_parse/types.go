@@ -1,5 +1,5 @@
 package jsonparse
 
 type IncomingJSON struct {
-	Url []string `json:"url"`
+	Url []string `json:"url" validate:"required"`
 }

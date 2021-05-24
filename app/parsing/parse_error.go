@@ -36,8 +36,5 @@ func (e errParseBody) Error() string {
 // ErrUrlParse - error from parsing incoming url
 var ErrUrlParse = errors.New("Could not parse an incoming url")
 
-// ErrParseJson - incorrect incomming json request
-var ErrParseJson = errors.New("Incorrect incomming json")
-
 // ErrEmptyJson - incorrect incomming json request
 var ErrEmptyJson = errors.New("Empty array of an incoming url")
