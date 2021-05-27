@@ -16,7 +16,7 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 	defer wg.Done()
 
 	// Parse URL
-	urlToGet, err := url.Parse(correctUrl(oneUrl))
+	urlToGet, err := url.Parse(oneUrl)
 	if err != nil {
 		log.Printf("Parse url: %v\n", err)
 
@@ -28,6 +28,7 @@ func async(wg *sync.WaitGroup, oneUrl string, PagesContent *[]PageUrls, cfg *cfg
 		)
 		return
 	}
+	urlToGet.Scheme = "https"
 
 	// get page content
 	content, err := parsePage(urlToGet, cfg)
